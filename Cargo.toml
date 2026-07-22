@@ -1,0 +1,13 @@
+[package]
+name = "hexview"
+version = "1.0.0"
+edition = "2021"
+authors = ["gavrilut.dragos@gmail.com"]
+description = "HexView is a HexViewer/Editor for all kind of files"
+license = "MIT"
+repository = "https://github.com/gdt050579/hexview/"
+readme = "README.md"
+
+
+[dependencies]
+appcui = "0.4.13"
