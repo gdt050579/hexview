@@ -15,6 +15,12 @@ impl ViewWin {
             path: path.to_path_buf(),
             bv: Handle::None,
         };
+        if let Ok(file_access) = FileAccess::open(&path) {
+            let mut bufview = bufferview!("type:FileAccess,t:0,l:0,r:0,b:3,flags:ScrollBars");
+            bufview.set_buffer(file_access);
+            win.bv = win.add(bufview);
+        } else {
+        }
         win
     }
 }

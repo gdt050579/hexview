@@ -6,7 +6,7 @@ use filecache::RandomAccessFlags;
 use std::path::Path;
 
 pub struct FileAccess {
-    cache: FileCache<RandomAccessFile>,
+    cache: Option<FileCache<RandomAccessFile>>,
 }
 impl FileAccess {
     pub fn open(path: &Path) -> Result<Self, String> {
@@ -18,7 +18,7 @@ impl FileAccess {
             },
             file,
         ).map_err(|e| e.to_string())?;
-        Ok(Self { cache })
+        Ok(Self { cache: Some(cache) })
     }
     fn internal_open(path: &Path) -> Result<RandomAccessFile, String> {
         // write & exclusive
@@ -39,42 +39,66 @@ impl FileAccess {
 
 impl Default for FileAccess {
     fn default() -> Self {
-        Self { cache: FileCache::new(CacheType::Memory, file) }
+        Self { cache: None }
     }
 }
 
 impl BufferAccess for FileAccess {
     fn count(&self) -> u64 {
-        self.cache.len()
+        if let Some(cache) = &self.cache {
+            cache.len()
+        } else {
+            0
+        }
     }
 
     fn get(&mut self, pos: u64) -> Option<u8> {
-        if let Ok(data) = self.cache.read(pos, 1) {
-            Some(data[0])
+        if let Some(cache) = &mut self.cache {
+            if let Ok(data) = cache.read(pos, 1) {
+                Some(data[0])
+            } else {
+                None
+            }
         } else {
             None
         }
     }
 
     fn can_write(&self) -> bool {
-        self.cache.can_write()
+        if let Some(cache) = &self.cache {
+            cache.can_write()
+        } else {
+            false
+        }
     }
 
     fn set(&mut self, pos: u64, value: u8) -> bool {
-        if let Ok(_) = self.cache.write(pos, &[value]) {
-            true
+        if let Some(cache) = &mut self.cache {
+            if let Ok(_) = cache.write(pos, &[value]) {
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
     }
 
     fn can_resize(&self) -> bool {
-        self.cache.can_resize()
+        if let Some(cache) = &self.cache {
+            cache.can_resize()
+        } else {
+            false
+        }
     }
 
     fn resize(&mut self, new_size: u64, fill_byte: u8) -> bool {
-        if let Ok(_) = self.cache.resize(new_size, fill_byte) {
-            true
+        if let Some(cache) = &mut self.cache {
+            if let Ok(_) = cache.resize(new_size, fill_byte) {
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
