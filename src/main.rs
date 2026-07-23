@@ -3,11 +3,12 @@ use appcui::ui::appbar::*;
 
 
 #[Desktop(events    = [CommandBarEvents,MenuEvents,DesktopEvents,AppBarEvents], 
-          commands  = [AddWindow,Exit, NoArrange, Cascade, Vertical, Horizontal, Grid])]
+          commands  = [AddWindow, Open, Folder, Exit, Cascade, Vertical, Horizontal, Grid, About])]
 struct MyDesktop {
     index: u32,
     arrange_method: Option<desktop::ArrangeWindowsMethod>,
-    menu_arrange: Handle<MenuButton>,
+    menu_file: Handle<MenuButton>,
+    menu_help: Handle<MenuButton>,
 }
 impl MyDesktop {
     fn new() -> Self {
@@ -15,7 +16,8 @@ impl MyDesktop {
             base: Desktop::new(),
             index: 1,
             arrange_method: None,
-            menu_arrange: Handle::None,
+            menu_file: Handle::None,
+            menu_help: Handle::None,
         }
     }
 }
@@ -29,16 +31,26 @@ impl DesktopEvents for MyDesktop {
     }
     
     fn on_start(&mut self) { 
-        // define and register a menu
-        self.menu_arrange = self.appbar().add(MenuButton::new("&Windows", menu!("
+        self.menu_file = self.appbar().add(MenuButton::new("&File", menu!("
             class: MyDesktop, items:[
-                {'&No arrangament',cmd: NoArrange, select: true},
-                {&Cascade,cmd: Cascade, select: false},
-                {&Vertical,cmd: Vertical, select: false},
-                {&Horizontal,cmd: Horizontal, select: false},
-                {&Grid,cmd: Grid, select: false},
+                {&Open, cmd: Open, shortcut: Ctrl+O},
+                {&Folder, cmd: Folder},
+                {---},
+                {E&xit, cmd: Exit, shortcut: Alt+F4},
             ]
-        "),0,Side::Left));
+        "), 0, Side::Left));
+
+        self.menu_help = self.appbar().add(MenuButton::new("&Help", menu!("
+            class: MyDesktop, items:[
+                {'&Arrange Windows', items:[
+                    {&Cascade, cmd: Cascade, select: true},
+                    {&Vertical, cmd: Vertical, select: false},
+                    {&Horizontal, cmd: Horizontal, select: false},
+                    {&Grid, cmd: Grid, select: false},
+                ]},
+                {&About, cmd: About},
+            ]
+        "), 0, Side::Right));
     }
         
 }
@@ -62,9 +74,18 @@ impl CommandBarEvents for MyDesktop {
     }
 }
 impl MenuEvents for MyDesktop {
-    fn on_select(&mut self,_menu:Handle<Menu>,_item:Handle<menu::SingleChoice>,command:mydesktop::Commands){
+    fn on_command(&mut self, _menu: Handle<Menu>, _item: Handle<menu::Command>, command: mydesktop::Commands) {
         match command {
-            mydesktop::Commands::NoArrange => self.arrange_method = None,
+            mydesktop::Commands::Open => {}
+            mydesktop::Commands::Folder => {}
+            mydesktop::Commands::Exit => self.close(),
+            mydesktop::Commands::About => {}
+            _ => {}
+        }
+    }
+
+    fn on_select(&mut self, _menu: Handle<Menu>, _item: Handle<menu::SingleChoice>, command: mydesktop::Commands) {
+        match command {
             mydesktop::Commands::Cascade => self.arrange_method = Some(desktop::ArrangeWindowsMethod::Cascade),
             mydesktop::Commands::Vertical => self.arrange_method = Some(desktop::ArrangeWindowsMethod::Vertical),
             mydesktop::Commands::Horizontal => self.arrange_method = Some(desktop::ArrangeWindowsMethod::Horizontal),
@@ -78,13 +99,13 @@ impl MenuEvents for MyDesktop {
     }
 }
 impl AppBarEvents for MyDesktop {
-    fn on_update(&self,appbar: &mut AppBar){
-        appbar.show(self.menu_arrange);
+    fn on_update(&self, appbar: &mut AppBar) {
+        appbar.show(self.menu_file);
+        appbar.show(self.menu_help);
     }
 }
 
 fn main() -> Result<(), appcui::system::Error> {
-    App::new().desktop(MyDesktop::new()).command_bar().app_bar().build()?.run();
+    App::new().color_schema(false).desktop(MyDesktop::new()).command_bar().app_bar().build()?.run();
     Ok(())
 }
-
