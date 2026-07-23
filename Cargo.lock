@@ -321,6 +321,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea2df4cf52843e0452895c455a1a2cfbb842a1e7329671acf418fdc53ed4c59"
 
 [[package]]
+name = "filecache"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16e536e77e537e274a126531e58c01db88b072a76dedde354c65cba872bf8635"
+dependencies = [
+ "EnumBitFlags",
+ "libc",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -441,6 +451,7 @@ name = "hexview"
 version = "1.0.0"
 dependencies = [
  "appcui",
+ "filecache",
 ]
 
 [[package]]

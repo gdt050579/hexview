@@ -1,10 +1,12 @@
 mod my_desktop;
 mod view_win;
+mod file_access;
 
 use appcui::prelude::*;
 use my_desktop::MyDesktop;
 use std::path::Path;
 use view_win::ViewWin;
+use file_access::FileAccess;
 
 fn main() -> Result<(), appcui::system::Error> {
     let mut app = App::new()
