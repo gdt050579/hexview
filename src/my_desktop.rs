@@ -1,3 +1,4 @@
+use appcui::dialogs::OpenFileDialogFlags;
 use appcui::prelude::*;
 use appcui::ui::appbar::*;
 use crate::ViewWin;
@@ -57,7 +58,11 @@ impl DesktopEvents for MyDesktop {
     impl MenuEvents for MyDesktop {
         fn on_command(&mut self, _menu: Handle<Menu>, _item: Handle<menu::Command>, command: mydesktop::Commands) {
         match command {
-            mydesktop::Commands::Open => {}
+            mydesktop::Commands::Open => {
+                if let Some(p) = dialogs::open("Opem", "", dialogs::Location::Current, None, OpenFileDialogFlags::Icons) {
+                    self.add_window(ViewWin::new(&p));
+                }
+            }
             mydesktop::Commands::Folder => {}
             mydesktop::Commands::Exit => self.close(),
             mydesktop::Commands::About => {}

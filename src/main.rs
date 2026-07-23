@@ -15,8 +15,7 @@ fn main() -> Result<(), appcui::system::Error> {
         .command_bar()
         .app_bar()
         .build()?;
-    let view_win = ViewWin::new(&Path::new("test.txt"));
-    app.add_window(view_win);
+
     app.run();
     Ok(())
 }
