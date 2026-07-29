@@ -22,7 +22,8 @@ impl ViewWin {
         match FileAccess::open(&path) {
             Ok(file_access) => {
                 win.add(hline!("l:0,b:3,r:0,flags:MergeBorders"));
-                win.offset_info = win.add(OffsetInfo::new(layout!("l:0, b:0, r:0, h:3")));
+                let h = OffsetInfo::new(layout!("l:0, b:0, r:0, h:3"), win.theme());
+                win.offset_info = win.add(h);
                 let mut bufview = bufferview!("type:FileAccess,t:0,l:0,r:0,b:4,flags:ScrollBars+ShowAddress, address-width: 8, format:Hex, columns: Auto, lsm:14");
                 bufview.set_buffer(file_access);
                 win.bv = win.add(bufview);
