@@ -17,7 +17,7 @@ impl MyDesktop {
         Self {
             base: Desktop::new(),
             index: 1,
-            arrange_method: None,
+            arrange_method: Some(desktop::ArrangeWindowsMethod::Grid),
             menu_file: Handle::None,
             menu_help: Handle::None,
         }
@@ -45,10 +45,10 @@ impl DesktopEvents for MyDesktop {
         self.menu_help = self.appbar().add(MenuButton::new("&Help", menu!("
             class: MyDesktop, items:[
                 {'&Arrange Windows', items:[
-                    {&Cascade, cmd: Cascade, select: true},
+                    {&Cascade, cmd: Cascade, select: false},
                     {&Vertical, cmd: Vertical, select: false},
                     {&Horizontal, cmd: Horizontal, select: false},
-                    {&Grid, cmd: Grid, select: false},
+                    {&Grid, cmd: Grid, select: true},
                 ]},
                 {&About, cmd: About},
             ]

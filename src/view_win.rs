@@ -23,7 +23,7 @@ impl ViewWin {
             Ok(file_access) => {
                 win.add(hline!("l:0,b:2,r:0,flags:MergeBorders"));
                 win.ofs = win.add(label!("'[        0]', l:2,b:2,w:11"));
-                let mut bufview = bufferview!("type:FileAccess,t:0,l:0,r:0,b:3,flags:ScrollBars+ShowAddress, address-width: 8, lsm:14");
+                let mut bufview = bufferview!("type:FileAccess,t:0,l:0,r:0,b:3,flags:ScrollBars+ShowAddress, address-width: 8, format:Hex, columns: Auto, lsm:14");
                 bufview.set_buffer(file_access);
                 win.bv = win.add(bufview);
             }
