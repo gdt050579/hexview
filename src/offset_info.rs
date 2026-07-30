@@ -1,7 +1,9 @@
 use appcui::prelude::*;
 
 fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
-    if value == 0 { return "0"; }
+    if value == 0 {
+        return "0";
+    }
     let mut pos = 31;
     let mut value = value;
     while pos > 0 {
@@ -15,7 +17,9 @@ fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
     unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
 }
 fn i64_to_str(value: i64, output: &mut [u8; 32]) -> &str {
-    if value == 0 { return "0"; }
+    if value == 0 {
+        return "0";
+    }
     let mut pos = 31;
     let mut value = value;
     let neg = if value < 0 {
@@ -78,6 +82,28 @@ fn bin_to_str(value: u8, output: &mut [u8; 32]) -> &str {
     }
     unsafe { std::str::from_utf8_unchecked(&output[0..8]) }
 }
+fn hex_to_str(value: u64, output: &mut [u8; 32], len: u8) -> &str {
+    let mut pos = 31;
+    let mut cnt = 0;
+    let mut value = value;
+    while pos > 0 {
+        let r = (value & 15) as u8;
+        output[pos] = if r < 10 { r + b'0' } else { r - 10 + b'A' };
+        value >>= 4;
+        pos -= 1;
+        cnt += 1;
+        if (cnt == len) || (value == 0) {
+            break;
+        }
+    }
+    while (pos > 0) && (cnt < len) {
+        output[pos] = b'0';
+        pos -= 1;
+        cnt += 1;
+    }
+    unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
+}
+
 
 enum PanelType {
     Offset,
@@ -88,6 +114,10 @@ enum PanelType {
     Bin,
     U16,
     I16,
+    Hex16,
+    U32,
+    I32,
+    Hex32,
 }
 impl PanelType {
     fn bytes_needed(&self) -> u8 {
@@ -100,6 +130,10 @@ impl PanelType {
             PanelType::Bin => 1,
             PanelType::U16 => 2,
             PanelType::I16 => 2,
+            PanelType::Hex16 => 2,
+            PanelType::U32 => 4,
+            PanelType::I32 => 4,
+            PanelType::Hex32 => 4,
         }
     }
     fn name(&self) -> &'static str {
@@ -112,6 +146,10 @@ impl PanelType {
             PanelType::Bin => "Bin:",
             PanelType::U16 => "U16:",
             PanelType::I16 => "I16:",
+            PanelType::Hex16 => "Hex:",
+            PanelType::U32 => "U32:",
+            PanelType::I32 => "I32:",
+            PanelType::Hex32 => "Hex:",
         }
     }
     fn write_value<'a>(&self, output: &'a mut [u8; 32], data: &OffsetData, width: u8) -> &'a str {
@@ -124,6 +162,10 @@ impl PanelType {
             PanelType::Bin => bin_to_str(data.buf[0], output),
             PanelType::U16 => u64_to_str(u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64, output),
             PanelType::I16 => i64_to_str(i16::from_le_bytes([data.buf[0], data.buf[1]]) as i64, output),
+            PanelType::Hex16 => hex_to_str(u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64, output, 4),
+            PanelType::U32 => u64_to_str(u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64, output),
+            PanelType::I32 => i64_to_str(i32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as i64, output),
+            PanelType::Hex32 => hex_to_str(u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64, output, 8),
         }
     }
 }
@@ -176,19 +218,18 @@ impl OffsetInfo {
         // third column
         self.add_panel(36, 0, 12, PanelType::U16);
         self.add_panel(36, 1, 12, PanelType::I16);
+        self.add_panel(36, 2, 12, PanelType::Hex16);
+        // fourth column
+        self.add_panel(54, 0, 14, PanelType::U32);
+        self.add_panel(54, 1, 14, PanelType::I32);
+        self.add_panel(54, 2, 14, PanelType::Hex32);
     }
     fn paint_panel_names(&mut self, theme: &Theme) {
-        self.surface
-            .clear(Character::with_attributes(' ', theme.window.normal));
+        self.surface.clear(Character::with_attributes(' ', theme.window.normal));
         let attr1 = theme.text.normal;
         for panel in self.panels.iter() {
-            self.surface.write_ascii(
-                panel.x as i32,
-                panel.y as i32,
-                panel.pty.name().as_bytes(),
-                attr1,
-                false,
-            );
+            self.surface
+                .write_ascii(panel.x as i32, panel.y as i32, panel.pty.name().as_bytes(), attr1, false);
         }
     }
     pub fn update(&mut self, data: &OffsetData) {
