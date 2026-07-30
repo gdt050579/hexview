@@ -1,6 +1,7 @@
 use appcui::prelude::*;
 
 fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
+    if value == 0 { return "0"; }
     let mut pos = 31;
     let mut value = value;
     while pos > 0 {
@@ -14,6 +15,7 @@ fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
     unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
 }
 fn i64_to_str(value: i64, output: &mut [u8; 32]) -> &str {
+    if value == 0 { return "0"; }
     let mut pos = 31;
     let mut value = value;
     let neg = if value < 0 {
@@ -120,11 +122,8 @@ impl PanelType {
             PanelType::U8 => u64_to_str(data.buf[0] as u64, output),
             PanelType::I8 => i64_to_str((data.buf[0] as i8) as i64, output),
             PanelType::Bin => bin_to_str(data.buf[0], output),
-            PanelType::U16 => u64_to_str(data.buf[0] as u64 + (data.buf[1] as u64) << 8, output),
-            PanelType::I16 => i64_to_str(
-                i16::from_le_bytes([data.buf[0], data.buf[1]]) as i64,
-                output,
-            ),
+            PanelType::U16 => u64_to_str(u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64, output),
+            PanelType::I16 => i64_to_str(i16::from_le_bytes([data.buf[0], data.buf[1]]) as i64, output),
         }
     }
 }
