@@ -1,4 +1,4 @@
-use crate::{FileAccess, OffsetInfo};
+use crate::{FileAccess, OffsetInfo, OffsetData};
 use appcui::prelude::*;
 use std::path::{Path, PathBuf};
 
@@ -39,17 +39,19 @@ impl ViewWin {
 
 impl BufferViewEvents<FileAccess> for ViewWin {    
     fn on_current_pos_changed(&mut self,handle: Handle<BufferView<FileAccess>>) -> EventProcessStatus {
-        let mut output = [0u8; 8];
-        let (cpos, bytes) = if let Some(bv) = self.control_mut(handle) {
-            let cpos = bv.current_pos();
-            let bytes_read = bv.read_bytes(cpos, &mut output);
-            (cpos, &output[..bytes_read as usize])
-        } else {
-            (u64::MAX, &output[..0])
-        };
+        let mut offset_data = OffsetData {
+            ofs: u64::MAX,
+            size: 0,
+            buf: [0u8; 8],
+            bufsz: 0,
+        };        
+        if let Some(bv) = self.control_mut(handle) {
+            offset_data.ofs = bv.current_pos();
+            offset_data.bufsz = bv.read_bytes(offset_data.ofs, &mut offset_data.buf) as u8;
+        }
         let h = self.offset_info;
         if let Some(offset_info) = self.control_mut(h) {
-            offset_info.update(cpos, bytes);
+            offset_info.update(&offset_data);
         }
         EventProcessStatus::Processed
     }

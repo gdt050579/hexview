@@ -1,9 +1,47 @@
 use appcui::prelude::*;
 
+fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
+    let mut pos = 31;
+    let mut value = value;
+    while value > 0 && pos > 0 {
+        output[pos] = (value % 10) as u8 + b'0';
+        value /= 10;
+        pos -= 1
+    }
+    unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
+}
+fn i64_to_str(value: i64, output: &mut [u8; 32]) -> &str {
+    let mut pos = 31;
+    let mut value = value;
+    let neg = if value < 0 { value = -value; b'-' } else { b'+' };
+    while value > 0 && pos > 0 {
+        output[pos] = (value % 10) as u8 + b'0';
+        value /= 10;
+        pos -= 1;
+    }
+    output[pos] = neg;
+    unsafe { std::str::from_utf8_unchecked(&output[pos..]) }
+}
+fn bin_to_str(value: u8, output: &mut [u8; 32]) -> &str {
+    if value & 1 !=0 { output[7] = b'1'; } else { output[7] = b'0'; }
+    if value & 2 !=0 { output[6] = b'1'; } else { output[6] = b'0'; }
+    if value & 4 !=0 { output[5] = b'1'; } else { output[5] = b'0'; }
+    if value & 8 !=0 { output[4] = b'1'; } else { output[4] = b'0'; }
+    if value & 16 !=0 { output[3] = b'1'; } else { output[3] = b'0'; }
+    if value & 32 !=0 { output[2] = b'1'; } else { output[2] = b'0'; }
+    if value & 64 !=0 { output[1] = b'1'; } else { output[1] = b'0'; }
+    if value & 128 !=0 { output[0] = b'1'; } else { output[0] = b'0'; }
+    unsafe { std::str::from_utf8_unchecked(&output[0..8]) }
+}
+
+
 enum PanelType {
     Offset,
     Size,
     OffsetProc,
+    U8,
+    I8,
+    Bin,
 }
 impl PanelType {
     fn name(&self) -> &'static str {
@@ -11,6 +49,19 @@ impl PanelType {
             PanelType::Offset => "Ofs :",
             PanelType::Size => "Size:",
             PanelType::OffsetProc => "Proc:",
+            PanelType::U8 => "U8 :",
+            PanelType::I8 => "I8 :",
+            PanelType::Bin => "Bin:",
+        }
+    }
+    fn write_value<'a>(&self, output: &'a mut [u8; 32], data: &OffsetData, width: u8) -> &'a str {
+        match self {
+            PanelType::Offset => "TODO",
+            PanelType::Size => "TODO",
+            PanelType::OffsetProc => "TODO",
+            PanelType::U8 => u64_to_str(data.buf[0] as u64, output),
+            PanelType::I8 => i64_to_str((data.buf[0] as i8) as i64, output),
+            PanelType::Bin => bin_to_str(data.buf[0], output),
         }
     }
 }
@@ -22,6 +73,12 @@ struct PanelInfo {
     pty: PanelType,
 }
 
+pub(crate) struct OffsetData {
+    pub(crate) ofs: u64,
+    pub(crate) size: u64,
+    pub(crate) buf: [u8; 8],
+    pub(crate) bufsz: u8,
+}
 
 #[CustomControl(overwrite = OnPaint)]
 pub struct OffsetInfo {
@@ -33,7 +90,7 @@ impl OffsetInfo {
     pub fn new(layout: Layout, theme: &Theme) -> Self {
         let mut obj = Self {
             base: ControlBase::new(layout, false),
-            surface: Surface::new(120,3),
+            surface: Surface::new(120, 3),
             panels: Vec::with_capacity(32),
             attr_value: theme.text.focused,
         };
@@ -46,19 +103,44 @@ impl OffsetInfo {
     }
     fn set_panel_type_arrangement_for_buffer_view(&mut self) {
         self.panels.clear();
-        // first row
+        // first column
         self.add_panel(0, 0, 12, PanelType::Offset);
         self.add_panel(0, 1, 12, PanelType::Size);
         self.add_panel(0, 2, 12, PanelType::OffsetProc);
+        // second column
+        self.add_panel(12, 0, 12, PanelType::U8);
+        self.add_panel(12, 1, 12, PanelType::I8);
+        self.add_panel(12, 2, 12, PanelType::Bin);
+        // third column
     }
     fn paint_panel_names(&mut self, theme: &Theme) {
-        self.surface.clear(Character::with_attributes(' ', theme.window.normal));
+        self.surface
+            .clear(Character::with_attributes(' ', theme.window.normal));
         let attr1 = theme.text.normal;
         for panel in self.panels.iter() {
-            self.surface.write_ascii(panel.x as i32, panel.y as i32, panel.pty.name().as_bytes(), attr1, false);
+            self.surface.write_ascii(
+                panel.x as i32,
+                panel.y as i32,
+                panel.pty.name().as_bytes(),
+                attr1,
+                false,
+            );
         }
     }
-    pub fn update(&mut self, cpos: u64, bytes: &[u8]) {
+    pub fn update(&mut self, data: &OffsetData) {
+        let mut output = [0u8; 32];
+        let empty_char = Character::with_attributes(' ', self.attr_value);
+        for panel in self.panels.iter() {
+            let name_len = panel.pty.name().len() as u8 + 1;
+            let x = panel.x as i32 + name_len as i32;
+            let y = panel.y as i32;
+            let w = panel.width.saturating_sub(name_len);
+            if w > 0 {
+                self.surface.fill_horizontal_line_with_size(x, y, w as u32, empty_char);
+                let s = panel.pty.write_value(&mut output, data, w);
+                self.surface.write_string(x, y, s, self.attr_value, false);
+            }
+        }
     }
 }
 impl OnPaint for OffsetInfo {

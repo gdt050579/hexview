@@ -9,6 +9,7 @@ use std::path::Path;
 use view_win::ViewWin;
 use file_access::FileAccess;
 use offset_info::OffsetInfo;
+use offset_info::OffsetData;
 
 fn main() -> Result<(), appcui::system::Error> {
     let mut app = App::new()
