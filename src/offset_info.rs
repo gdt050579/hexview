@@ -121,7 +121,75 @@ fn hex_to_str(value: u64, output: &mut [u8; 32], len: u8) -> &str {
     }
     unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
 }
+fn size_to_str(value: u64, output: &mut [u8; 32]) -> &str {
+    // writes the size in bytes, KB, MB, GB, TB, PB, with 2 decimal places (except for bytes)
+    // the size is also grouped by 3 digits, with a comma separator
+    const UNITS: [&[u8]; 6] = [b" B", b" KB", b" MB", b" GB", b" TB", b" PB"];
 
+    let (mut whole, frac, unit) = if value < 1024 {
+        (value, None, 0usize)
+    } else {
+        let mut unit = 1usize;
+        let mut div: u64 = 1024;
+        while unit < 5 && value / div >= 1024 {
+            div *= 1024;
+            unit += 1;
+        }
+        // hundredths = round(value * 100 / div), using u128 to avoid overflow
+        let hundredths = (value as u128 * 100 + div as u128 / 2) / div as u128;
+        let mut whole = (hundredths / 100) as u64;
+        let mut frac = (hundredths % 100) as u8;
+        // rounding may push us to the next unit (e.g. 1024.00 KB -> 1.00 MB)
+        if whole >= 1024 && unit < 5 {
+            unit += 1;
+            whole = 1;
+            frac = 0;
+        }
+        (whole, Some(frac), unit)
+    };
+
+    // write unit suffix from the end of the buffer
+    let mut pos = 31;
+    for &b in UNITS[unit].iter().rev() {
+        output[pos] = b;
+        pos -= 1;
+    }
+
+    // write fractional part (2 decimals) if not bytes
+    if let Some(frac) = frac {
+        output[pos] = (frac % 10) + b'0';
+        pos -= 1;
+        output[pos] = (frac / 10) + b'0';
+        pos -= 1;
+        output[pos] = b'.';
+        pos -= 1;
+    }
+
+    // write integer part with comma grouping
+    if whole == 0 {
+        output[pos] = b'0';
+        unsafe { std::str::from_utf8_unchecked(&output[pos..]) }
+    } else {
+        let mut g = 0;
+        while pos > 0 {
+            output[pos] = (whole % 10) as u8 + b'0';
+            whole /= 10;
+            pos -= 1;
+            if whole == 0 {
+                break;
+            }
+            g += 1;
+            if g == 3 {
+                g = 0;
+                if pos > 0 {
+                    output[pos] = b',';
+                    pos -= 1;
+                }
+            }
+        }
+        unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
+    }
+}
 
 
 enum PanelType {
@@ -173,8 +241,8 @@ impl PanelType {
     }
     fn write_value<'a>(&self, output: &'a mut [u8; 32], data: &OffsetData, width: u8) -> &'a str {
         match self {
-            PanelType::Offset => "TODO",
-            PanelType::Size => "TODO",
+            PanelType::Offset => size_to_str(data.ofs, output),
+            PanelType::Size => size_to_str(data.size, output),
             PanelType::OffsetProc => "TODO",
             PanelType::U8 => u64_to_str(data.buf[0] as u64, output),
             PanelType::I8 => i64_to_str((data.buf[0] as i8) as i64, output),
