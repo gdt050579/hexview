@@ -6,12 +6,21 @@ fn u64_to_str(value: u64, output: &mut [u8; 32]) -> &str {
     }
     let mut pos = 31;
     let mut value = value;
+    let mut g = 0;
     while pos > 0 {
         output[pos] = (value % 10) as u8 + b'0';
         value /= 10;
         pos -= 1;
         if value == 0 {
             break;
+        }
+        g += 1;
+        if g == 3 {
+            g = 0;
+            if pos > 0 {
+                output[pos] = b',';
+                pos -= 1;
+            }
         }
     }
     unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
@@ -22,6 +31,7 @@ fn i64_to_str(value: i64, output: &mut [u8; 32]) -> &str {
     }
     let mut pos = 31;
     let mut value = value;
+    let mut g = 0;
     let neg = if value < 0 {
         value = -value;
         b'-'
@@ -34,6 +44,14 @@ fn i64_to_str(value: i64, output: &mut [u8; 32]) -> &str {
         pos -= 1;
         if value == 0 {
             break;
+        }
+        g += 1;
+        if g == 3 {
+            g = 0;
+            if pos > 0 {
+                output[pos] = b',';
+                pos -= 1;
+            }
         }
     }
     output[pos] = neg;
@@ -103,6 +121,7 @@ fn hex_to_str(value: u64, output: &mut [u8; 32], len: u8) -> &str {
     }
     unsafe { std::str::from_utf8_unchecked(&output[pos + 1..]) }
 }
+
 
 
 enum PanelType {
