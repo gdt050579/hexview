@@ -65,7 +65,11 @@ pub struct ViewWin {
 impl ViewWin {
     pub fn new(path: &Path) -> Self {
         let mut win = ViewWin {
-            base: window!("View,a:c,w:57,h:26,flags:Sizeable"),
+            base: Window::new(
+                &path.display().to_string(),
+                layout!("a:c,w:57,h:26"),
+                window::Flags::Sizeable,
+            ),
             path: path.to_path_buf(),
             bv: Handle::None,
             errmsg: Handle::None,
