@@ -10,5 +10,5 @@ readme = "README.md"
 
 
 [dependencies]
-appcui = "0.4.14"
+appcui = "0.4.16"
 filecache = "0.1.0"
