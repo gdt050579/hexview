@@ -191,7 +191,6 @@ fn size_to_str(value: u64, output: &mut [u8; 32]) -> &str {
     }
 }
 
-
 enum PanelType {
     Offset,
     Size,
@@ -239,7 +238,7 @@ impl PanelType {
             PanelType::Hex32 => "Hex:",
         }
     }
-    fn write_value<'a>(&self, output: &'a mut [u8; 32], data: &OffsetData, width: u8) -> &'a str {
+    fn write_value<'a>(&self, output: &'a mut [u8; 32], data: &OffsetData, width: u8, little_endian: bool) -> &'a str {
         match self {
             PanelType::Offset => size_to_str(data.ofs, output),
             PanelType::Size => size_to_str(data.size, output),
@@ -247,12 +246,56 @@ impl PanelType {
             PanelType::U8 => u64_to_str(data.buf[0] as u64, output),
             PanelType::I8 => i64_to_str((data.buf[0] as i8) as i64, output),
             PanelType::Bin => bin_to_str(data.buf[0], output),
-            PanelType::U16 => u64_to_str(u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64, output),
-            PanelType::I16 => i64_to_str(i16::from_le_bytes([data.buf[0], data.buf[1]]) as i64, output),
-            PanelType::Hex16 => hex_to_str(u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64, output, 4),
-            PanelType::U32 => u64_to_str(u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64, output),
-            PanelType::I32 => i64_to_str(i32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as i64, output),
-            PanelType::Hex32 => hex_to_str(u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64, output, 8),
+            PanelType::U16 => u64_to_str(
+                if little_endian {
+                    u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64
+                } else {
+                    u16::from_be_bytes([data.buf[0], data.buf[1]]) as u64
+                },
+                output,
+            ),
+            PanelType::I16 => i64_to_str(
+                if little_endian {
+                    i16::from_le_bytes([data.buf[0], data.buf[1]]) as i64
+                } else {
+                    i16::from_be_bytes([data.buf[0], data.buf[1]]) as i64
+                },
+                output,
+            ),
+            PanelType::Hex16 => hex_to_str(
+                if little_endian {
+                    u16::from_le_bytes([data.buf[0], data.buf[1]]) as u64
+                } else {
+                    u16::from_be_bytes([data.buf[0], data.buf[1]]) as u64
+                },
+                output,
+                4,
+            ),
+            PanelType::U32 => u64_to_str(
+                if little_endian {
+                    u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64
+                } else {
+                    u32::from_be_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64
+                },
+                output,
+            ),
+            PanelType::I32 => i64_to_str(
+                if little_endian {
+                    i32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as i64
+                } else {
+                    i32::from_be_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as i64
+                },
+                output,
+            ),
+            PanelType::Hex32 => hex_to_str(
+                if little_endian {
+                    u32::from_le_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64
+                } else {
+                    u32::from_be_bytes([data.buf[0], data.buf[1], data.buf[2], data.buf[3]]) as u64
+                },
+                output,
+                8,
+            ),
         }
     }
 }
@@ -319,7 +362,7 @@ impl OffsetInfo {
                 .write_ascii(panel.x as i32, panel.y as i32, panel.pty.name().as_bytes(), attr1, false);
         }
     }
-    pub fn update(&mut self, data: &OffsetData) {
+    pub fn update(&mut self, data: &OffsetData, little_endian: bool) {
         let mut output = [0u8; 32];
         let empty_char = Character::with_attributes(' ', self.attr_value);
         for panel in self.panels.iter() {
@@ -333,7 +376,7 @@ impl OffsetInfo {
                 if bytes_needed > data.bufsz {
                     self.surface.write_string(x, y, "-", self.attr_value, false);
                 } else {
-                    let s = panel.pty.write_value(&mut output, data, w);
+                    let s = panel.pty.write_value(&mut output, data, w, little_endian);
                     self.surface.write_string(x, y, s, self.attr_value, false);
                 }
             }
