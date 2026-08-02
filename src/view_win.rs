@@ -1,4 +1,4 @@
-use crate::{FileAccess, OffsetData, OffsetInfo};
+use crate::{CodePage, FileAccess, OffsetData, OffsetInfo};
 use appcui::prelude::*;
 use appcui::ui::appbar::{MenuButton, Side};
 use std::path::{Path, PathBuf};
@@ -17,7 +17,8 @@ use bufferview::{
         ReprOct, ReprBin, ReprChar,
         ReprUIntU8, ReprUIntU16, ReprUIntU32, ReprUIntU64,
         ReprIntI8, ReprIntI16, ReprIntI32, ReprIntI64,
-        ReprFloat32, ReprFloat64, ReprFloatE4M3, ReprFloatE5M2
+        ReprFloat32, ReprFloat64, ReprFloatE4M3, ReprFloatE5M2,
+        CodePageAscii, CodePageCp437, CodePageWindows1252
     ]
 )]
 pub struct ViewWin {
@@ -55,6 +56,10 @@ pub struct ViewWin {
     repr_float_e4m3: Handle<menu::SingleChoice>,
     repr_float_e5m2: Handle<menu::SingleChoice>,
     data_repr: DataRepresentationFormat,
+    cp_ascii: Handle<menu::SingleChoice>,
+    cp_437: Handle<menu::SingleChoice>,
+    cp_1252: Handle<menu::SingleChoice>,
+    code_page: CodePage,
 }
 
 impl ViewWin {
@@ -95,6 +100,10 @@ impl ViewWin {
             repr_float_e4m3: Handle::None,
             repr_float_e5m2: Handle::None,
             data_repr: DataRepresentationFormat::Hex(HexFormat::Byte),
+            cp_ascii: Handle::None,
+            cp_437: Handle::None,
+            cp_1252: Handle::None,
+            code_page: CodePage::default(),
         };
 
         let mut data_repr_menu = Menu::new();
@@ -215,10 +224,31 @@ impl ViewWin {
         win.endian_big =
             endian_menu.add(menu::SingleChoice::new("&Big", Key::None, viewwin::Commands::EndianBig, false));
 
+        let mut code_page_menu = Menu::new();
+        win.cp_ascii = code_page_menu.add(menu::SingleChoice::new(
+            "&ASCII",
+            Key::None,
+            viewwin::Commands::CodePageAscii,
+            false,
+        ));
+        win.cp_437 = code_page_menu.add(menu::SingleChoice::new(
+            "CP&437",
+            Key::None,
+            viewwin::Commands::CodePageCp437,
+            true,
+        ));
+        win.cp_1252 = code_page_menu.add(menu::SingleChoice::new(
+            "&Windows-1252",
+            Key::None,
+            viewwin::Commands::CodePageWindows1252,
+            false,
+        ));
+
         let mut view_menu = Menu::new();
         view_menu.add(menu::SubMenu::new("&Data Representation", data_repr_menu));
         view_menu.add(menu::SubMenu::new("&Columns", columns_menu));
         view_menu.add(menu::SubMenu::new("&Endianness", endian_menu));
+        view_menu.add(menu::SubMenu::new("Code &Page", code_page_menu));
         win.menu_view = win.appbar().add(MenuButton::new("&View", view_menu, 1, Side::Left));
 
         match FileAccess::open(&path) {
@@ -360,6 +390,22 @@ impl ViewWin {
         };
         self.set_data_repr(next);
     }
+
+    fn code_page_menu_item(&self) -> Handle<menu::SingleChoice> {
+        match self.code_page {
+            CodePage::Ascii => self.cp_ascii,
+            CodePage::Cp437 => self.cp_437,
+            CodePage::Windows1252 => self.cp_1252,
+        }
+    }
+
+    fn set_code_page(&mut self, code_page: CodePage) {
+        self.code_page = code_page;
+        let h = self.bv;
+        if let Some(bv) = self.control_mut(h) {
+            bv.set_codepage(code_page.to_bufferview());
+        }
+    }
 }
 
 impl BufferViewEvents<FileAccess> for ViewWin {
@@ -412,6 +458,11 @@ impl MenuEvents for ViewWin {
         if let Some(item) = menu.get_mut(h_endian) {
             item.set_selected();
         }
+
+        let h_cp = self.code_page_menu_item();
+        if let Some(item) = menu.get_mut(h_cp) {
+            item.set_selected();
+        }
     }
 
     fn on_select(&mut self, _menu: Handle<Menu>, _item: Handle<menu::SingleChoice>, command: viewwin::Commands) {
@@ -450,6 +501,9 @@ impl MenuEvents for ViewWin {
             viewwin::Commands::ReprFloatE5M2 => {
                 self.set_data_repr(DataRepresentationFormat::Float(FloatFormat::E5M2))
             }
+            viewwin::Commands::CodePageAscii => self.set_code_page(CodePage::Ascii),
+            viewwin::Commands::CodePageCp437 => self.set_code_page(CodePage::Cp437),
+            viewwin::Commands::CodePageWindows1252 => self.set_code_page(CodePage::Windows1252),
             _ => {}
         }
     }
